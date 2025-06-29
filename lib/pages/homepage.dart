@@ -38,7 +38,7 @@ class _HomepageState extends State<Homepage> {
                           ),
                         ),
                         Text(
-                          'Alexandra!',
+                          'Learner!',
                           style: GoogleFonts.outfit(
                             fontSize: 18,
                             color: Colorr.textcolor,

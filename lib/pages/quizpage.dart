@@ -522,7 +522,7 @@ class _QuizPageState extends State<QuizPage> {
                   decoration: BoxDecoration(
                     gradient: selectedAnswers.isNotEmpty 
                         ? LinearGradient(
-                            colors: [Colorr.lightcolor, Color(0xFF44A08D)],
+                            colors: [Colorr.lightcolor,Colorr.lightcolor],
                             begin: Alignment.centerLeft,
                             end: Alignment.centerRight,
                           )
@@ -546,6 +546,7 @@ class _QuizPageState extends State<QuizPage> {
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
                         color: Colors.white,
+                        
                       ),
                     ),
                   ),
@@ -585,8 +586,17 @@ class _QuizPageState extends State<QuizPage> {
     
     score += scoreEarned;
     
-    // Auto-scroll to feedback
-    _scrollToFeedback();
+    // auto-scroll to feedback with proper timing
+    Future.delayed(Duration(milliseconds: 100), () {
+      if (_feedbackKey.currentContext != null) {
+        Scrollable.ensureVisible(
+          _feedbackKey.currentContext!,
+          duration: Duration(milliseconds: 800),
+          curve: Curves.easeInOutCubic,
+          alignment: 0.2, // Shows feedback near top of visible area
+        );
+      }
+    });
   }
 
   void _nextQuestion() {
