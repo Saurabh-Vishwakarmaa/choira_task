@@ -18,7 +18,7 @@ class _QuizPageState extends State<QuizPage> {
   List<MultipleChoiceQuestion> quizQuestions = [];
   bool showFeedback = false;
   String feedbackType = ''; // 'correct', 'partial', 'incorrect'
-  ScrollController _scrollController = ScrollController();
+  final ScrollController _scrollController = ScrollController();
   GlobalKey _feedbackKey = GlobalKey();
 
   @override
@@ -600,31 +600,32 @@ class _QuizPageState extends State<QuizPage> {
   }
 
   void _nextQuestion() {
-    if (currentQuestionIndex < quizQuestions.length - 1) {
+  if (currentQuestionIndex < quizQuestions.length - 1) {
+    // First scroll to top, then update state
+    _scrollController.animateTo(
+      0.0,
+      duration: Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    ).then((_) {
+      // Update state after scroll completes
       setState(() {
         currentQuestionIndex++;
-        selectedAnswers = [];
+        selectedAnswers.clear();
         showFeedback = false;
         feedbackType = '';
       });
-      
-      // Scroll back to top for new question
-      _scrollController.animateTo(
-        0,
-        duration: Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
-    } else {
-      // Navigate to results page
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => ResultPage(
-            score: score, 
-            totalQuestions: quizQuestions.length,
-          ),
+    });
+  } else {
+    // Navigate to results page
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ResultPage(
+          score: score, 
+          totalQuestions: quizQuestions.length,
         ),
-      );
-    }
+      ),
+    );
   }
+}
 }
