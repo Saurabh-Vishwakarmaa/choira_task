@@ -97,7 +97,7 @@ class _HomepageState extends State<Homepage> {
                 SizedBox(height: 10),
                 
                 Text(
-                  'type of session ↓',
+                  'find out who you are ↓',
                   style: GoogleFonts.outfit(
                     fontSize: 16,
                     color: Colors.grey,
@@ -106,14 +106,14 @@ class _HomepageState extends State<Homepage> {
                 
                 SizedBox(height: 40),
                 
-                // Practice options grid
+                // Challenge options grid
                 Row(
                   children: [
                     Expanded(
                       child: Container(
                         height: 120,
                         decoration: BoxDecoration(
-                          color: Colorr.textcolor, // Selected (black)
+                          color: Colors.white,
                           borderRadius: BorderRadius.circular(30),
                           boxShadow: [
                             BoxShadow(
@@ -127,17 +127,17 @@ class _HomepageState extends State<Homepage> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(
-                              Icons.shuffle,
-                              color: Colors.white, // White icon for selected
+                              Icons.flash_on,
+                              color: Colors.black,
                               size: 30,
                             ),
                             SizedBox(height: 10),
                             Text(
-                              'Random',
+                              'Rookie',
                               style: GoogleFonts.outfit(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
-                                color: Colors.white, // White text for selected
+                                color: Colors.black,
                               ),
                             ),
                           ],
@@ -163,13 +163,13 @@ class _HomepageState extends State<Homepage> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(
-                              Icons.tag,
+                              Icons.trending_up,
                               color: Colorr.textcolor,
                               size: 30,
                             ),
                             SizedBox(height: 10),
                             Text(
-                              'Precise',
+                              'Pro',
                               style: GoogleFonts.outfit(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
@@ -205,13 +205,13 @@ class _HomepageState extends State<Homepage> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(
-                              Icons.refresh,
+                              Icons.whatshot,
                               color: Colorr.textcolor,
                               size: 30,
                             ),
                             SizedBox(height: 10),
                             Text(
-                              'Rework',
+                              'Expert',
                               style: GoogleFonts.outfit(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
@@ -241,13 +241,13 @@ class _HomepageState extends State<Homepage> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(
-                              Icons.list,
+                              Icons.military_tech,
                               color: Colorr.textcolor,
                               size: 30,
                             ),
                             SizedBox(height: 10),
                             Text(
-                              'Multiple',
+                              'Master',
                               style: GoogleFonts.outfit(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
@@ -263,7 +263,7 @@ class _HomepageState extends State<Homepage> {
                 
                 SizedBox(height: 50),
                 
-                // Button replacing audio practice section
+                // Button  section
                 GestureDetector(
                   onTap: () {
                   Navigator.push(context,MaterialPageRoute(builder: (context) => QuizPage()));
@@ -290,7 +290,7 @@ class _HomepageState extends State<Homepage> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Start Practice',
+                              'Start Quiz',
                               style: GoogleFonts.outfit(
                                 fontSize: 18,
                                 fontWeight: FontWeight.w600,

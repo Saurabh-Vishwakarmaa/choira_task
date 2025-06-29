@@ -1,7 +1,7 @@
 import 'package:choira/constants/newcolor.dart';
 import 'package:choira/pages/homepage.dart';
 import 'package:flutter/material.dart';
-import 'dart:math' as math;
+import 'package:google_fonts/google_fonts.dart';
 
 void main() {
   runApp(const MyApp());
@@ -13,12 +13,10 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Choira',
+      title: 'QuizMaster',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        
         useMaterial3: true,
-        
       ),
       home: const SplashScreen(),
     );
@@ -34,178 +32,184 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen>
     with TickerProviderStateMixin {
-  late AnimationController _controller1;
-  late AnimationController _controller2;
-  late AnimationController _zoomController;
-  late Animation<double> _zoomAnimation;
-  bool _shouldZoom = false;
-  bool _initialized = false;
+  late AnimationController _fadeController;
+  late AnimationController _colorController;
+  
+  late Animation<Color?> _backgroundColorAnimation;
+  late Animation<Color?> _textColorAnimation;
+  
+  bool _showText = false;
 
   @override
   void initState() {
     super.initState();
 
-    // Initialize animation controllers
-    _controller1 = AnimationController(
-      duration: const Duration(seconds: 2),
-      vsync: this,
-    )..repeat();
-
-    _controller2 = AnimationController(
-      duration: const Duration(seconds: 3),
-      vsync: this,
-    )..repeat();
-
-    _zoomController = AnimationController(
-      duration: const Duration(milliseconds: 800),
+    _fadeController = AnimationController(
+      duration: const Duration(milliseconds: 500),
       vsync: this,
     );
-  }
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    
-    if (!_initialized) {
-      _zoomAnimation = Tween<double>(
-        begin: 60.0,
-        end: MediaQuery.of(context).size.width * 2.5,
-      ).animate(CurvedAnimation(
-        parent: _zoomController,
-        curve: Curves.easeInOut,
-      ));
+    _colorController = AnimationController(
+      duration: const Duration(milliseconds: 2000),
+      vsync: this,
+    );
 
-      // Start zoom animation after 2.5 seconds
-      Future.delayed(const Duration(milliseconds: 2500), () {
-        setState(() {
-          _shouldZoom = true;
-        });
-        _controller1.stop();
-        _controller2.stop();
-        _zoomController.forward().then((_) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const Homepage()),
-          );
-        });
+    // Color animations 
+    _backgroundColorAnimation = ColorTween(
+      begin: Colors.white,
+      end: Colorr.lightcolor ?? const Color(0xFF1A1A2E),
+    ).animate(CurvedAnimation(
+      parent: _colorController,
+      curve: Curves.easeInOutCubic,
+    ));
+
+    _textColorAnimation = ColorTween(
+      begin: Colors.black87,
+      end: Colorr.textcolor ?? Colors.white,
+    ).animate(CurvedAnimation(
+      parent: _colorController,
+      curve: Curves.easeInOutCubic,
+    ));
+
+    // Start color transition after 0.5 seconds
+    Future.delayed(const Duration(milliseconds: 500), () {
+      _colorController.forward();
+    });
+
+    // Show text after 1 second
+    Future.delayed(const Duration(milliseconds: 1000), () {
+      setState(() {
+        _showText = true;
       });
-      
-      _initialized = true;
-    }
+    });
+
+    // Navigate after 3 seconds
+    Future.delayed(const Duration(milliseconds: 3000), () {
+      _fadeController.forward().then((_) {
+        Navigator.pushReplacement(
+          context,
+          PageRouteBuilder(
+            pageBuilder: (context, animation, secondaryAnimation) => const Homepage(),
+            transitionDuration: const Duration(milliseconds: 600),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return FadeTransition(
+                opacity: animation,
+                child: child,
+              );
+            },
+          ),
+        );
+      });
+    });
   }
 
   @override
   void dispose() {
-    _controller1.dispose();
-    _controller2.dispose();
-    _zoomController.dispose();
+    _fadeController.dispose();
+    _colorController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colorr.textcolor,
-      body: Stack(
-        children: [
-          // Normal rotating balls when not zooming
-          if (!_shouldZoom)
-            Center(
-              child: Container(
-                width: 120,
-                height: 120,
-                child: Stack(
+      body: AnimatedBuilder(
+        animation: Listenable.merge([_fadeController, _colorController]),
+        builder: (context, child) {
+          return Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  _backgroundColorAnimation.value ?? Colors.white,
+                  (_backgroundColorAnimation.value ?? Colors.white).withOpacity(0.9),
+                  (_backgroundColorAnimation.value ?? Colors.white).withOpacity(0.8),
+                ],
+              ),
+            ),
+            child: Opacity(
+              opacity: 1.0 - _fadeController.value,
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // First ball (Rectangle)
-                    AnimatedBuilder(
-                      animation: _controller1,
-                      builder: (context, child) {
-                        return Transform.translate(
-                          offset: Offset(
-                            30 * math.cos(_controller1.value * 2 * math.pi),
-                            30 * math.sin(_controller1.value * 2 * math.pi),
+                    // center icon
+                    Container(
+                      width: 80,
+                      height: 80,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Color.lerp(
+                          const Color(0xFFF8F8F8),
+                          Colors.white,
+                          1.0 - _colorController.value,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1 * (1.0 - _colorController.value)),
+                            blurRadius: 15,
+                            offset: Offset(0, 5),
                           ),
-                          child: Transform.translate(
-                            offset: Offset(15, 15),
-                            child: Container(
-                              width: 60,
-                              height: 60,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.rectangle,
-                                borderRadius: BorderRadius.circular(8),
-                                color: Colorr.backgroundcolor,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colorr.backgroundcolor.withOpacity(0.3),
-                                    blurRadius: 8,
-                                    spreadRadius: 2,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        );
-                      },
+                        ],
+                      ),
+                      child: Icon(
+                        Icons.school,
+                        color: _textColorAnimation.value,
+                        size: 40,
+                      ),
                     ),
-                    // Second ball (Circle)
-                    AnimatedBuilder(
-                      animation: _controller1,
-                      builder: (context, child) {
-                        return Transform.translate(
-                          offset: Offset(
-                            30 * math.cos((_controller1.value + 0.5) * 2 * math.pi),
-                            30 * math.sin((_controller1.value + 0.5) * 2 * math.pi),
-                          ),
-                          child: Transform.translate(
-                            offset: Offset(15, 15),
-                            child: Container(
-                              width: 60,
-                              height: 60,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: Colors.cyan,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.cyan.withOpacity(0.3),
-                                    blurRadius: 8,
-                                    spreadRadius: 2,
-                                  ),
-                                ],
-                              ),
+                    
+                    SizedBox(height: 40),
+                    
+                    // Text with color transition
+                    AnimatedOpacity(
+                      opacity: _showText ? 1.0 : 0.0,
+                      duration: Duration(milliseconds: 800),
+                      child: Column(
+                        children: [
+                          Text(
+                            'QuizMaster',
+                            style: GoogleFonts.outfit(
+                              fontSize: 42,
+                              fontWeight: FontWeight.w700,
+                              color: _textColorAnimation.value,
+                              letterSpacing: 1.0,
                             ),
                           ),
-                        );
-                      },
+                          SizedBox(height: 12),
+                          Text(
+                            'Master Every Question',
+                            style: GoogleFonts.outfit(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w400,
+                              color: (_textColorAnimation.value ?? Colors.black).withOpacity(0.6),
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                          SizedBox(height: 20),
+                          // Animated accent line
+                          Container(
+                            width: 30 + (20 * _colorController.value),
+                            height: 2 + (1 * _colorController.value),
+                            decoration: BoxDecoration(
+                              color: Color.lerp(
+                                Colors.grey[400],
+                                const Color(0xFF4ECDC4),
+                                _colorController.value,
+                              ),
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
               ),
             ),
-          // Zooming rectangle that covers the whole screen with cool effect
-          if (_shouldZoom)
-            Center(
-              child: AnimatedBuilder(
-                animation: _zoomAnimation,
-                builder: (context, child) {
-                  return Container(
-                    width: _zoomAnimation.value,
-                    height: _zoomAnimation.value,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(_zoomAnimation.value * 0.5),
-                      color: Colorr.backgroundcolor,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colorr.backgroundcolor.withOpacity(0.5),
-                          blurRadius: _zoomAnimation.value * 0.05,
-                          spreadRadius: _zoomAnimation.value * 0.02,
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-            ),
-        ],
+          );
+        },
       ),
     );
   }
