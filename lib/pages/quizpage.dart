@@ -6,7 +6,6 @@ import 'package:choira/constants/newcolor.dart';
 
 import '../data/questionbank.dart';
 
-
 class QuizPage extends StatefulWidget {
   @override
   _QuizPageState createState() => _QuizPageState();
@@ -15,15 +14,77 @@ class QuizPage extends StatefulWidget {
 class _QuizPageState extends State<QuizPage> {
   int currentQuestionIndex = 0;
   List<int> selectedAnswers = [];
-  int score = 0;
+  double score = 0.0; // Changed to double for partial scoring
   List<MultipleChoiceQuestion> quizQuestions = [];
   bool showFeedback = false;
-  bool isCorrectAnswer = false;
+  String feedbackType = ''; // 'correct', 'partial', 'incorrect'
+  ScrollController _scrollController = ScrollController();
+  GlobalKey _feedbackKey = GlobalKey();
 
   @override
   void initState() {
     super.initState();
     quizQuestions = MusicQuestionBank.questions;
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _scrollToFeedback() {
+    if (showFeedback && _feedbackKey.currentContext != null) {
+      Future.delayed(Duration(milliseconds: 300), () {
+        Scrollable.ensureVisible(
+          _feedbackKey.currentContext!,
+          duration: Duration(milliseconds: 500),
+          curve: Curves.easeInOut,
+        );
+      });
+    }
+  }
+
+  // Enhanced scoring logic
+  double _calculateScore(List<int> userAnswers, List<int> correctAnswers, bool allowMultiple) {
+    if (userAnswers.isEmpty) return 0.0;
+    
+    if (!allowMultiple) {
+      // Single choice: either fully correct or wrong
+      return userAnswers.length == 1 && correctAnswers.contains(userAnswers.first) ? 1.0 : 0.0;
+    }
+    
+    // Multiple choice: calculate partial scoring
+    Set<int> userSet = userAnswers.toSet();
+    Set<int> correctSet = correctAnswers.toSet();
+    
+    // Calculate intersection and union for partial scoring
+    Set<int> intersection = userSet.intersection(correctSet);
+    Set<int> wrongSelections = userSet.difference(correctSet);
+    Set<int> missedCorrect = correctSet.difference(userSet);
+    
+    if (intersection.isEmpty) {
+      return 0.0; // No correct answers selected
+    }
+    
+    if (wrongSelections.isEmpty && missedCorrect.isEmpty) {
+      return 1.0; // Perfect answer
+    }
+    
+    // Partial scoring formula: (correct selections - wrong selections) / total correct
+    // With minimum of 0 and penalty for wrong selections
+    double partialScore = (intersection.length - (wrongSelections.length * 0.5)) / correctSet.length;
+    return partialScore.clamp(0.0, 1.0);
+  }
+
+  String _getFeedbackType(double scorePercent, bool allowMultiple) {
+    if (!allowMultiple) {
+      return scorePercent == 1.0 ? 'correct' : 'incorrect';
+    }
+    
+    if (scorePercent == 1.0) return 'correct';
+    if (scorePercent > 0.0) return 'partial';
+    return 'incorrect';
   }
 
   @override
@@ -35,63 +96,86 @@ class _QuizPageState extends State<QuizPage> {
     final question = quizQuestions[currentQuestionIndex];
     
     return Scaffold(
-      backgroundColor: Colorr.textcolor,
+      backgroundColor: Color(0xFF0A0A0A), // Deep black background
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(20.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header with back button and profile
+              // Compact Header with back button and progress
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   GestureDetector(
                     onTap: () => Navigator.pop(context),
                     child: Container(
-                      width: 40,
-                      height: 40,
+                      width: 35,
+                      height: 35,
                       decoration: BoxDecoration(
-                        color: Colors.grey[800],
-                        borderRadius: BorderRadius.circular(12),
+                        color: Color(0xFF1E1E1E),
+                        borderRadius: BorderRadius.circular(10),
                       ),
                       child: Icon(
                         Icons.arrow_back_ios_new,
                         color: Colors.white,
-                        size: 18,
+                        size: 16,
                       ),
                     ),
                   ),
-                  Row(
-                    children: [
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(12),
-                       
+                  SizedBox(width: 15),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Question ${currentQuestionIndex + 1} of ${quizQuestions.length}',
+                              style: GoogleFonts.outfit(
+                                fontSize: 12,
+                                color: Colors.white70,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            Text(
+                              '${((currentQuestionIndex + 1) / quizQuestions.length * 100).toInt()}%',
+                              style: GoogleFonts.outfit(
+                                fontSize: 12,
+                                color: Colorr.lightcolor,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                      SizedBox(width: 10),
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: Colors.grey[800],
-                          borderRadius: BorderRadius.circular(12),
+                        SizedBox(height: 6),
+                        Container(
+                          width: double.infinity,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: Color(0xFF1E1E1E),
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                          child: FractionallySizedBox(
+                            alignment: Alignment.centerLeft,
+                            widthFactor: (currentQuestionIndex + 1) / quizQuestions.length,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [Colorr.lightcolor, Color(0xFF44A08D)],
+                                ),
+                                borderRadius: BorderRadius.circular(2),
+                              ),
+                            ),
+                          ),
                         ),
-                        child: Icon(
-                          Icons.apps,
-                          color: Colors.white,
-                          size: 18,
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ],
               ),
               
-              SizedBox(height: 40),
+              SizedBox(height: 25),
               
               // Subject and Question Number
               Row(
@@ -118,252 +202,332 @@ class _QuizPageState extends State<QuizPage> {
               
               SizedBox(height: 30),
               
-              // Question Text
-              Text(
-                question.questionText,
-                style: GoogleFonts.outfit(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.white,
-                  height: 1.4,
-                ),
-              ),
-              
-              SizedBox(height: 10),
-              
-              // Question type indicator
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: question.allowMultipleSelection 
-                      ? Color(0xFF4ECDC4).withOpacity(0.1)
-                      : Colors.orange.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  question.allowMultipleSelection 
-                      ? 'Select all that apply' 
-                      : 'Select one answer',
-                  style: GoogleFonts.outfit(
-                    fontSize: 12,
-                    color: question.allowMultipleSelection 
-                        ? Color(0xFF4ECDC4)
-                        : Colors.orange,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              
-              SizedBox(height: 30),
-              
-              // Answer Options
+              // Scrollable Content (Question + Options + Feedback)
               Expanded(
-                child: ListView.builder(
-                  itemCount: question.options.length,
-                  itemBuilder: (context, index) {
-                    String option = question.options[index];
-                    bool isSelected = selectedAnswers.contains(index);
-                    bool isCorrect = question.correctAnswerIndexes.contains(index);
-                    
-                    Color containerColor;
-                    Color textColor;
-                    Color borderColor = Colors.transparent;
-                    
-                    if (showFeedback) {
-                      if (isCorrect) {
-                        containerColor = Colors.green;
-                        textColor = Colors.white;
-                      } else if (isSelected && !isCorrect) {
-                        containerColor = Colors.red;
-                        textColor = Colors.white;
-                      } else {
-                        containerColor = Colors.grey[850]!;
-                        textColor = Colors.white60;
-                      }
-                    } else {
-                      if (isSelected) {
-                        containerColor = Colors.white;
-                        textColor = Colors.black;
-                      } else {
-                        containerColor = Colors.grey[850]!;
-                        textColor = Colors.white;
-                      }
-                    }
-                    
-                    return Container(
-                      margin: EdgeInsets.only(bottom: 15),
-                      child: GestureDetector(
-                        onTap: showFeedback ? null : () {
-                          setState(() {
-                            if (question.allowMultipleSelection) {
-                              if (isSelected) {
-                                selectedAnswers.remove(index);
-                              } else {
-                                selectedAnswers.add(index);
-                              }
-                            } else {
-                              selectedAnswers = [index];
-                            }
-                          });
-                        },
-                        child: Container(
-                          width: double.infinity,
-                          padding: EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            color: containerColor,
-                            borderRadius: BorderRadius.circular(15),
-                            border: Border.all(color: borderColor, width: 1),
+                child: SingleChildScrollView(
+                  controller: _scrollController,
+                  child: Column(
+                    children: [
+                      // Question Banner (Dark with border)
+                      Container(
+                        width: double.infinity,
+                        padding: EdgeInsets.all(25),
+                        decoration: BoxDecoration(
+                          color: Colors.white, // Changed from Color(0xFF1A1A1A)
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: Color(0xFF2A2A2A),
+                            width: 1,
                           ),
-                          child: Row(
-                            children: [
-                              // Radio/Checkbox button indicator
-                              Container(
-                                width: 24,
-                                height: 24,
-                                margin: EdgeInsets.only(right: 15),
-                                decoration: BoxDecoration(
-                                  shape: question.allowMultipleSelection 
-                                      ? BoxShape.rectangle 
-                                      : BoxShape.circle,
-                                  borderRadius: question.allowMultipleSelection 
-                                      ? BorderRadius.circular(6) 
-                                      : null,
-                                  border: Border.all(
-                                    color: showFeedback 
-                                        ? (isCorrect ? Colors.white : Colors.white54)
-                                        : (isSelected ? (isSelected ? Colors.black : Colors.white) : Colors.grey),
-                                    width: 2,
-                                  ),
-                                  color: showFeedback 
-                                      ? (isCorrect ? Colors.white : Colors.transparent)
-                                      : (isSelected ? Colors.black : Colors.transparent),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              question.questionText,
+                              style: GoogleFonts.outfit(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.black, // Changed from Colors.white
+                                height: 1.4,
+                              ),
+                            ),
+                            SizedBox(height: 15),
+                            Container(
+                              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: question.allowMultipleSelection 
+                                    ? Colorr.lightcolor.withOpacity(0.2)
+                                    : Colors.orange.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: question.allowMultipleSelection 
+                                      ? Colorr.lightcolor
+                                      : Colors.orange,
+                                  width: 1,
                                 ),
-                                child: showFeedback && isCorrect
-                                    ? Icon(
-                                        question.allowMultipleSelection ? Icons.check : Icons.circle,
-                                        color: Colors.green, 
-                                        size: 16
-                                      )
-                                    : (isSelected && !showFeedback 
+                              ),
+                              child: Text(
+                                question.allowMultipleSelection 
+                                    ? 'Select all that apply (Partial credit available)' 
+                                    : 'Select one answer',
+                                style: GoogleFonts.outfit(
+                                  fontSize: 12,
+                                  color: question.allowMultipleSelection 
+                                      ? Colorr.lightcolor
+                                      : Colors.orange,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      
+                      SizedBox(height: 30),
+                      
+                      // Answer Options
+                      ...List.generate(question.options.length, (index) {
+                        String option = question.options[index];
+                        bool isSelected = selectedAnswers.contains(index);
+                        bool isCorrect = question.correctAnswerIndexes.contains(index);
+                        
+                        Color containerColor;
+                        Color textColor;
+                        Color borderColor = Colors.transparent;
+                        
+                        if (showFeedback) {
+                          if (isCorrect && isSelected) {
+                            // Correctly selected
+                            containerColor = Color(0xFF22C55E); // Green
+                            textColor = Colors.white;
+                            borderColor = Color(0xFF16A34A);
+                          } else if (isCorrect && !isSelected) {
+                            // Missed correct answer
+                            containerColor = Color(0xFF22C55E).withOpacity(0.3);
+                            textColor = Colors.white;
+                            borderColor = Color(0xFF22C55E);
+                          } else if (!isCorrect && isSelected) {
+                            // Wrongly selected
+                            containerColor = Color(0xFFEF4444); // Red
+                            textColor = Colors.white;
+                            borderColor = Color(0xFFDC2626);
+                          } else {
+                            // Not selected and not correct
+                            containerColor = Color(0xFF1A1A1A);
+                            textColor = Colors.white60;
+                            borderColor = Color(0xFF2A2A2A);
+                          }
+                        } else {
+                          if (isSelected) {
+                            containerColor = Colorr.lightcolor;
+                            textColor = Color(0xFF0A0A0A);
+                            borderColor = Color(0xFF44A08D);
+                          } else {
+                            containerColor = Colors.white; // Changed from Color(0xFF1A1A1A)
+                            textColor = Colors.black; // Changed from Colors.white
+                            borderColor = Color(0xFF2A2A2A);
+                          }
+                        }
+                        
+                        return Container(
+                          margin: EdgeInsets.only(bottom: 15),
+                          child: GestureDetector(
+                            onTap: showFeedback ? null : () {
+                              setState(() {
+                                if (question.allowMultipleSelection) {
+                                  if (isSelected) {
+                                    selectedAnswers.remove(index);
+                                  } else {
+                                    selectedAnswers.add(index);
+                                  }
+                                } else {
+                                  selectedAnswers = [index];
+                                }
+                              });
+                            },
+                            child: Container(
+                              width: double.infinity,
+                              padding: EdgeInsets.all(20),
+                              decoration: BoxDecoration(
+                                color: containerColor,
+                                borderRadius: BorderRadius.circular(15),
+                                border: Border.all(color: borderColor, width: 1),
+                              ),
+                              child: Row(
+                                children: [
+                                  // Radio/Checkbox button indicator
+                                  Container(
+                                    width: 24,
+                                    height: 24,
+                                    margin: EdgeInsets.only(right: 15),
+                                    decoration: BoxDecoration(
+                                      shape: question.allowMultipleSelection 
+                                          ? BoxShape.rectangle 
+                                          : BoxShape.circle,
+                                      borderRadius: question.allowMultipleSelection 
+                                          ? BorderRadius.circular(6) 
+                                          : null,
+                                      border: Border.all(
+                                        color: showFeedback 
+                                            ? (isCorrect ? Colors.white : Colors.white54)
+                                            : (isSelected ? Color(0xFF0A0A0A) : Colors.grey),
+                                        width: 2,
+                                      ),
+                                      color: showFeedback 
+                                          ? (isCorrect && isSelected ? Colors.white : Colors.transparent)
+                                          : (isSelected ? Color(0xFF0A0A0A) : Colors.transparent),
+                                    ),
+                                    child: showFeedback && isCorrect
                                         ? Icon(
                                             question.allowMultipleSelection ? Icons.check : Icons.circle,
-                                            color: Colors.white, 
+                                            color: Color(0xFF22C55E), 
                                             size: 16
                                           )
-                                        : null),
-                              ),
-                              Expanded(
-                                child: Text(
-                                  option,
-                                  style: GoogleFonts.outfit(
-                                    fontSize: 16,
-                                    color: textColor,
-                                    fontWeight: FontWeight.w500,
+                                        : (isSelected && !showFeedback 
+                                            ? Icon(
+                                                question.allowMultipleSelection ? Icons.check : Icons.circle,
+                                                color: Colorr.lightcolor, 
+                                                size: 16
+                                              )
+                                            : null),
                                   ),
+                                  Expanded(
+                                    child: Text(
+                                      option,
+                                      style: GoogleFonts.outfit(
+                                        fontSize: 16,
+                                        color: textColor,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ),
+                                  // Show indicators for feedback
+                                  if (showFeedback) ...[
+                                    if (isCorrect && isSelected)
+                                      Icon(Icons.check_circle, color: Colors.white, size: 20),
+                                    if (isCorrect && !isSelected)
+                                      Icon(Icons.info_outline, color: Colors.white, size: 20),
+                                    if (!isCorrect && isSelected)
+                                      Icon(Icons.cancel, color: Colors.white, size: 20),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      }),
+                      
+                      // Enhanced Feedback Message
+                      if (showFeedback)
+                        Container(
+                          key: _feedbackKey,
+                          width: double.infinity,
+                          padding: EdgeInsets.all(25),
+                          margin: EdgeInsets.only(top: 10, bottom: 20),
+                          decoration: BoxDecoration(
+                            color: feedbackType == 'correct' ? Color(0xFF22C55E) : 
+                                   feedbackType == 'partial' ? Color(0xFF3B82F6) : Color(0xFFEF4444),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: feedbackType == 'correct' ? Color(0xFF16A34A) : 
+                                     feedbackType == 'partial' ? Color(0xFF2563EB) : Color(0xFFDC2626),
+                              width: 1,
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: EdgeInsets.all(6),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Icon(
+                                      feedbackType == 'correct' ? Icons.check : 
+                                      feedbackType == 'partial' ? Icons.star_half : Icons.close,
+                                      color: feedbackType == 'correct' ? Color(0xFF22C55E) : 
+                                             feedbackType == 'partial' ? Color(0xFF3B82F6) : Color(0xFFEF4444),
+                                      size: 16,
+                                    ),
+                                  ),
+                                  SizedBox(width: 15),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          feedbackType == 'correct' ? 'Excellent!' : 
+                                          feedbackType == 'partial' ? 'Partially Correct!' : 'Incorrect',
+                                          style: GoogleFonts.outfit(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.w700,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                        Text(
+                                          '${(_calculateScore(selectedAnswers, question.correctAnswerIndexes, question.allowMultipleSelection) * 100).toInt()}% points earned',
+                                          style: GoogleFonts.outfit(
+                                            fontSize: 12,
+                                            color: Colors.white70,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              SizedBox(height: 15),
+                              Text(
+                                _getFeedbackMessage(feedbackType, question),
+                                style: GoogleFonts.outfit(
+                                  fontSize: 14,
+                                  color: Colors.white,
+                                  height: 1.4,
                                 ),
                               ),
+                              if (feedbackType != 'correct') ...[
+                                SizedBox(height: 15),
+                                Text(
+                                  'Complete correct answers:',
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 14,
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                SizedBox(height: 8),
+                                ...question.correctAnswerIndexes.map((i) => 
+                                  Padding(
+                                    padding: EdgeInsets.only(top: 5),
+                                    child: Row(
+                                      children: [
+                                        Icon(Icons.check_circle, color: Colors.white, size: 16),
+                                        SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            question.options[i],
+                                            style: GoogleFonts.outfit(
+                                              fontSize: 14,
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ).toList(),
+                              ],
                             ],
                           ),
                         ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-              
-              // Enhanced Feedback Message
-              if (showFeedback)
-                Container(
-                  width: double.infinity,
-                  padding: EdgeInsets.all(25),
-                  margin: EdgeInsets.only(bottom: 20),
-                  decoration: BoxDecoration(
-                    color: isCorrectAnswer 
-                        ? Colors.green.withOpacity(0.15) 
-                        : Colors.red.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: isCorrectAnswer ? Colors.green : Colors.red,
-                      width: 1,
-                    ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Container(
-                            padding: EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: isCorrectAnswer ? Colors.green : Colors.red,
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(
-                              isCorrectAnswer ? Icons.check : Icons.close,
-                              color: Colors.white,
-                              size: 20,
-                            ),
-                          ),
-                          SizedBox(width: 15),
-                          Text(
-                            isCorrectAnswer ? 'Excellent!' : 'Incorrect',
-                            style: GoogleFonts.outfit(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w700,
-                              color: isCorrectAnswer ? Colors.green : Colors.red,
-                            ),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: 15),
-                      Text(
-                        isCorrectAnswer 
-                            ? 'Great job! You got it right. Keep up the excellent work!'
-                            : 'Don\'t worry, learning is a process. The correct answer${question.correctAnswerIndexes.length > 1 ? 's are' : ' is'}:',
-                        style: GoogleFonts.outfit(
-                          fontSize: 14,
-                          color: Colors.white70,
-                          height: 1.4,
-                        ),
-                      ),
-                      if (!isCorrectAnswer) ...[
-                        SizedBox(height: 10),
-                        ...question.correctAnswerIndexes.map((i) => 
-                          Padding(
-                            padding: EdgeInsets.only(top: 5),
-                            child: Row(
-                              children: [
-                                Icon(Icons.arrow_forward, color: Colors.green, size: 16),
-                                SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    question.options[i],
-                                    style: GoogleFonts.outfit(
-                                      fontSize: 14,
-                                      color: Colors.green,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ).toList(),
-                      ],
+                      
+                      SizedBox(height: 80),
                     ],
                   ),
                 ),
+              ),
               
-              // Action Button
+              // Action Button (Fixed at bottom)
               GestureDetector(
                 onTap: selectedAnswers.isNotEmpty ? (showFeedback ? _nextQuestion : _checkAnswer) : null,
                 child: Container(
                   width: double.infinity,
                   padding: EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: selectedAnswers.isNotEmpty 
-                        ? Colorr.lightcolor
-                        : Colors.grey[700],
+                    gradient: selectedAnswers.isNotEmpty 
+                        ? LinearGradient(
+                            colors: [Colorr.lightcolor, Color(0xFF44A08D)],
+                            begin: Alignment.centerLeft,
+                            end: Alignment.centerRight,
+                          )
+                        : null,
+                    color: selectedAnswers.isEmpty ? Color(0xFF2A2A2A) : null,
                     borderRadius: BorderRadius.circular(30),
                     boxShadow: selectedAnswers.isNotEmpty ? [
                       BoxShadow(
@@ -396,18 +560,33 @@ class _QuizPageState extends State<QuizPage> {
     );
   }
 
+  String _getFeedbackMessage(String type, MultipleChoiceQuestion question) {
+    switch (type) {
+      case 'correct':
+        return 'Perfect! You got all the answers right. Keep up the excellent work!';
+      case 'partial':
+        return 'Good job! You got some answers right. ${question.allowMultipleSelection ? "In multiple choice questions, you earn partial credit for correct selections." : ""}';
+      case 'incorrect':
+        return 'Don\'t worry, learning is a process. Review the correct answers below and try again!';
+      default:
+        return '';
+    }
+  }
+
   void _checkAnswer() {
     final question = quizQuestions[currentQuestionIndex];
-    bool correct = question.isCorrect(selectedAnswers);
+    double scoreEarned = _calculateScore(selectedAnswers, question.correctAnswerIndexes, question.allowMultipleSelection);
+    String type = _getFeedbackType(scoreEarned, question.allowMultipleSelection);
     
     setState(() {
       showFeedback = true;
-      isCorrectAnswer = correct;
+      feedbackType = type;
     });
     
-    if (correct) {
-      score++;
-    }
+    score += scoreEarned;
+    
+    // Auto-scroll to feedback
+    _scrollToFeedback();
   }
 
   void _nextQuestion() {
@@ -416,15 +595,22 @@ class _QuizPageState extends State<QuizPage> {
         currentQuestionIndex++;
         selectedAnswers = [];
         showFeedback = false;
-        isCorrectAnswer = false;
+        feedbackType = '';
       });
+      
+      // Scroll back to top for new question
+      _scrollController.animateTo(
+        0,
+        duration: Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
     } else {
       // Navigate to results page
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
           builder: (context) => ResultPage(
-            score: score,
+            score: score, 
             totalQuestions: quizQuestions.length,
           ),
         ),
