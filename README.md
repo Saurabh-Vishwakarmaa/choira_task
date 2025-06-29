@@ -42,10 +42,7 @@ A modern Flutter quiz application that helps users discover their learning perso
 ### Installation
 
 1. Clone the repository:
-```bash
-git clone https://github.com/yourusername/quizmaster.git
-cd quizmaster
-```
+
 
 2. Install dependencies:
 ```bash
